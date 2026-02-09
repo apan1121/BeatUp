@@ -13,6 +13,8 @@ const Editor = (() => {
     const elRow2 = () => document.getElementById('editor-row2');
     const elIndicator = () => document.getElementById('stage-indicator');
 
+    let adLoaded = false;
+
     function init() {
         stages = loadStages();
         currentStageIndex = 0;
@@ -20,6 +22,15 @@ const Editor = (() => {
         renderGrid();
         updateIndicator();
         initBPM();
+        loadAd();
+    }
+
+    function loadAd() {
+        if (adLoaded) return;
+        try {
+            (adsbygoogle = window.adsbygoogle || []).push({});
+            adLoaded = true;
+        } catch (e) { /* ignore */ }
     }
 
     let previewTimer = null;
