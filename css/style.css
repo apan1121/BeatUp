@@ -1,0 +1,524 @@
+/* === Reset & Base === */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* === Screen Management === */
+.screen {
+    display: none;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    flex-direction: column;
+}
+.screen.active {
+    display: flex;
+}
+.hidden { display: none !important; }
+
+/* === Buttons === */
+.btn {
+    padding: 12px 32px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 160px;
+}
+.btn:hover { transform: scale(1.03); }
+.btn:active { transform: scale(0.97); }
+.btn-primary {
+    background: linear-gradient(135deg, #7c5ce0, #a855f7);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(124, 92, 224, 0.3);
+}
+.btn-primary:hover { box-shadow: 0 6px 16px rgba(124, 92, 224, 0.4); }
+.btn-secondary {
+    background: #666;
+    color: #fff;
+}
+.btn-danger {
+    background: transparent;
+    color: #e74c3c;
+    border: 1px solid #e74c3c;
+    padding: 6px 12px;
+    min-width: auto;
+    font-size: 13px;
+}
+.btn-large {
+    padding: 16px 48px;
+    font-size: 20px;
+    min-width: 200px;
+}
+.nav-btn {
+    background: transparent;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    color: #555;
+    transition: all 0.15s;
+}
+.nav-btn:hover { border-color: #7c5ce0; color: #7c5ce0; }
+
+/* === Home Screen === */
+#screen-home {
+    background: linear-gradient(180deg, #fafafa 0%, #f0ecf9 100%);
+    align-items: center;
+    justify-content: center;
+}
+.home-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    z-index: 1;
+}
+.home-title {
+    font-size: 72px;
+    font-weight: 800;
+    color: #444;
+    letter-spacing: -2px;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.08);
+}
+.title-x {
+    color: #7c5ce0;
+}
+.home-subtitle {
+    font-size: 18px;
+    color: #888;
+    margin-bottom: 20px;
+}
+.home-decor, .game-decor {
+    position: absolute;
+    font-size: 48px;
+    opacity: 0.25;
+    user-select: none;
+}
+.decor-tl { top: 40px; left: 40px; }
+.decor-tr { top: 40px; right: 40px; }
+.decor-bl { bottom: 40px; left: 40px; }
+.decor-br { bottom: 40px; right: 40px; }
+
+/* === Editor Screen === */
+#screen-editor {
+    background: #2a2a3a;
+    color: #eee;
+}
+.editor-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 12px 20px;
+    background: #222233;
+    border-bottom: 1px solid #3a3a4a;
+}
+.editor-header > :first-child {
+    justify-self: start;
+}
+.editor-header > :last-child {
+    justify-self: end;
+}
+.stage-nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 18px;
+    font-weight: 600;
+}
+.stage-nav-btn {
+    background: transparent;
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: #ccc;
+    font-size: 22px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+.stage-nav-btn:hover { border-color: #7c5ce0; color: #7c5ce0; }
+.stage-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.editor-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding: 20px;
+    overflow-y: auto;
+}
+.section-label {
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 10px;
+}
+.source-section {
+    text-align: center;
+}
+.source-list {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.source-item {
+    width: 90px;
+    height: 90px;
+    border: 2px dashed #555;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    transition: all 0.15s;
+    background: #333345;
+    gap: 4px;
+}
+.source-item:hover {
+    border-color: #7c5ce0;
+    transform: scale(1.05);
+}
+.source-item .action-icon {
+    font-size: 36px;
+    line-height: 1;
+}
+.source-item .action-name {
+    font-size: 12px;
+    color: #aaa;
+}
+
+/* === Beat Grid (shared editor & game) === */
+.beat-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.beat-row {
+    display: flex;
+    gap: 12px;
+}
+.beat-box {
+    width: 100px;
+    height: 100px;
+    border: 2px solid #ddd;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    transition: all 0.12s ease;
+    position: relative;
+    gap: 2px;
+}
+.beat-box .action-icon {
+    font-size: 40px;
+    line-height: 1;
+}
+.beat-box .action-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+}
+
+/* Editor grid styling */
+#screen-editor .beat-box {
+    background: #3a3a4e;
+    border-color: #555;
+    cursor: pointer;
+}
+#screen-editor .beat-box .action-name {
+    color: #ccc;
+}
+#screen-editor .beat-box.drag-over {
+    border-color: #7c5ce0;
+    background: #4a4a6e;
+    transform: scale(1.05);
+}
+#screen-editor .beat-box.has-action {
+    border-style: solid;
+}
+
+/* Editor BPM */
+.editor-bpm {
+    text-align: center;
+}
+.editor-bpm label {
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 6px;
+    display: block;
+}
+.bpm-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+}
+.bpm-row input[type="range"] {
+    width: 200px;
+    accent-color: #7c5ce0;
+}
+.bpm-row span {
+    font-size: 20px;
+    font-weight: 700;
+    color: #7c5ce0;
+    min-width: 40px;
+}
+
+/* Editor ad */
+.editor-ad {
+    width: 100%;
+    max-width: 600px;
+    margin-top: 12px;
+}
+
+/* Editor buttons */
+.editor-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+/* === Game Screen === */
+#screen-game {
+    background: linear-gradient(180deg, #fafafa 0%, #f0ecf9 100%);
+    align-items: center;
+}
+.game-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+    padding: 12px 20px;
+    background: rgba(255,255,255,0.9);
+    border-bottom: 1px solid #eee;
+}
+.game-header > :first-child {
+    justify-self: start;
+}
+.game-header > :last-child {
+    justify-self: end;
+}
+.game-stage-info {
+    font-size: 36px;
+    font-weight: 800;
+    color: #555;
+    letter-spacing: 4px;
+    text-align: center;
+}
+.game-round-label {
+    font-size: clamp(18px, 2.5vmin, 32px);
+    font-weight: 800;
+    padding: 0.4vmin 2vmin;
+    border-radius: 8px;
+    text-align: center;
+    letter-spacing: 2px;
+    margin-bottom: 5vmin;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.round-watch {
+    background: #e8f0fe;
+    color: #4A90D9;
+    border: 3px solid #4A90D9;
+}
+.round-do {
+    background: #fef3e8;
+    color: #E8913A;
+    border: 3px solid #E8913A;
+    animation: pulse-do 0.5s ease-in-out infinite alternate;
+}
+@keyframes pulse-do {
+    from { transform: scale(1); }
+    to { transform: scale(1.08); }
+}
+.game-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+/* Game grid - responsive scaling with vmin */
+.game-grid .beat-box {
+    width: clamp(100px, 18vmin, 260px);
+    height: clamp(100px, 18vmin, 260px);
+    border: 3px solid #ddd;
+    border-radius: clamp(12px, 2vmin, 24px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.game-grid .beat-box .action-icon {
+    font-size: clamp(40px, 8vmin, 100px);
+}
+.game-grid .beat-box .action-name {
+    font-size: clamp(14px, 2.5vmin, 30px);
+}
+.game-grid .beat-row {
+    gap: clamp(14px, 3vmin, 36px);
+}
+.game-grid {
+    gap: clamp(14px, 3vmin, 36px);
+}
+
+/* Active beat (lit up) */
+.beat-box.active {
+    border-color: #4A90D9;
+    background: #e8f0fe;
+    transform: scale(1.08);
+    box-shadow: 0 0 24px rgba(74, 144, 217, 0.4);
+}
+
+.game-controls {
+    padding: 20px;
+    z-index: 1;
+}
+.btn-play-stop {
+    background: #666;
+}
+
+/* Game complete overlay */
+.game-complete {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(255,255,255,0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+.complete-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+.complete-content h2 {
+    font-size: 48px;
+}
+.complete-content p {
+    font-size: 18px;
+    color: #888;
+}
+
+/* === Source item wrapper (for delete button) === */
+.source-item-wrapper {
+    position: relative;
+    display: inline-block;
+}
+.source-del-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    z-index: 2;
+}
+.source-del-btn:hover { background: #c0392b; }
+.source-add-btn {
+    border-color: #7c5ce0 !important;
+    border-style: dashed !important;
+    cursor: pointer;
+    opacity: 0.7;
+}
+.source-add-btn:hover { opacity: 1; }
+
+/* === Modal === */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+.modal-box {
+    background: #2a2a3a;
+    border-radius: 16px;
+    padding: 28px;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    color: #eee;
+}
+.modal-box h3 {
+    font-size: 20px;
+    text-align: center;
+}
+.modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.modal-field label {
+    font-size: 13px;
+    color: #999;
+}
+.modal-field input {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 2px solid #555;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 18px;
+    outline: none;
+}
+.modal-field input:focus {
+    border-color: #7c5ce0;
+}
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+/* === Action colors (applied via data-action) === */
+.action-forward .action-icon { color: #4A90D9; }
+.action-backward .action-icon { color: #E8913A; }
+.action-turn .action-icon { color: #C44A8C; }
+
+/* === Responsive === */
+@media (max-width: 600px) {
+    .beat-box { width: 70px; height: 70px; }
+    .beat-box .action-icon { font-size: 28px; }
+    .source-item { width: 70px; height: 70px; }
+    .source-item .action-icon { font-size: 28px; }
+    .home-title { font-size: 48px; }
+    .game-stage-info { font-size: 24px; }
+}
