@@ -14,7 +14,7 @@ body {
     display: none;
     position: absolute;
     top: 0; left: 0;
-    width: 100%; height: 100%;
+    width: 100%; height: 100vh;
     flex-direction: column;
 }
 .screen.active {
@@ -113,6 +113,7 @@ body {
 #screen-editor {
     background: #2a2a3a;
     color: #eee;
+    overflow: hidden;
 }
 .editor-header {
     display: grid;
@@ -156,13 +157,14 @@ body {
 }
 
 .editor-body {
-    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 24px;
     padding: 20px;
+    height: calc(100vh - 53px);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 .section-label {
     font-size: 14px;
