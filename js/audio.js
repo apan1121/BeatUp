@@ -4,6 +4,10 @@
 
 const AudioEngine = (() => {
     let ctx = null;
+    let musicBuffer = null;
+    let musicSource = null;
+    let musicName = null;
+    let musicOffset = 0; // 第一拍在音訊中的秒數位置
 
     function getContext() {
         if (!ctx) {
@@ -11,6 +15,47 @@ const AudioEngine = (() => {
         }
         if (ctx.state === 'suspended') ctx.resume();
         return ctx;
+    }
+
+    /** 直接設定已解碼的音樂 buffer（由 BPMDetector 呼叫） */
+    function setMusic(buffer, name, offset) {
+        stopMusic();
+        musicBuffer = buffer;
+        musicName = name;
+        musicOffset = offset || 0;
+    }
+
+    /**
+     * 在指定的 AudioContext 時間開始播放音樂
+     * 從偵測到的第一拍位置開始播放，讓音樂節拍對齊遊戲節拍
+     */
+    function playMusic(startTime) {
+        if (!musicBuffer) return;
+        stopMusic();
+        const ac = getContext();
+        musicSource = ac.createBufferSource();
+        musicSource.buffer = musicBuffer;
+        musicSource.connect(ac.destination);
+        musicSource.start(startTime, musicOffset);
+    }
+
+    /** 停止音樂播放 */
+    function stopMusic() {
+        if (musicSource) {
+            try { musicSource.stop(); } catch (e) { /* already stopped */ }
+            musicSource = null;
+        }
+    }
+
+    function hasMusic() { return !!musicBuffer; }
+
+    function getMusicName() { return musicName; }
+
+    function clearMusic() {
+        stopMusic();
+        musicBuffer = null;
+        musicName = null;
+        musicOffset = 0;
     }
 
     function currentTime() {
@@ -113,5 +158,5 @@ const AudioEngine = (() => {
         });
     }
 
-    return { getContext, currentTime, playBeat, playComplete };
+    return { getContext, currentTime, playBeat, playComplete, setMusic, playMusic, stopMusic, hasMusic, getMusicName, clearMusic };
 })();

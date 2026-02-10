@@ -335,6 +335,23 @@ body {
     color: #777;
     margin-top: 4px;
 }
+#btn-detect-bpm {
+    margin-top: 8px;
+}
+#btn-detect-bpm:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.bpm-music-status {
+    display: inline-block;
+    font-size: 13px;
+    color: #7c5ce0;
+    margin-top: 6px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 /* Editor ad */
 .editor-ad {

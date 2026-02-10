@@ -72,6 +72,55 @@ const Editor = (() => {
                 startPreview(parseInt(slider.value, 10));
             }
         });
+
+        // BPM 偵測
+        const detectBtn = document.getElementById('btn-detect-bpm');
+        const fileInput = document.getElementById('bpm-music-file');
+        const clearMusicBtn = document.getElementById('btn-clear-music');
+        clearMusicBtn.addEventListener('click', () => {
+            AudioEngine.clearMusic();
+            updateMusicStatus();
+        });
+        updateMusicStatus();
+
+        detectBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+            detectBtn.disabled = true;
+            detectBtn.textContent = '偵測中...';
+            try {
+                const result = await BPMDetector.detect(file);
+                const bpm = result.bpm;
+                slider.value = bpm;
+                value.textContent = bpm;
+                updateBpmSeconds(bpm);
+                updateMusicStatus();
+            } catch (e) {
+                console.error('BPM detect error', e);
+                detectBtn.textContent = '偵測失敗';
+                setTimeout(() => { detectBtn.textContent = '🎵 從音樂偵測'; }, 1500);
+                return;
+            } finally {
+                detectBtn.disabled = false;
+                fileInput.value = '';
+            }
+            detectBtn.textContent = '🎵 從音樂偵測';
+        });
+    }
+
+    function updateMusicStatus() {
+        const statusEl = document.getElementById('bpm-music-status');
+        const clearBtn = document.getElementById('btn-clear-music');
+        if (AudioEngine.hasMusic()) {
+            const name = AudioEngine.getMusicName() || '音樂';
+            statusEl.textContent = '🎶 ' + name;
+            statusEl.classList.remove('hidden');
+            clearBtn.classList.remove('hidden');
+        } else {
+            statusEl.classList.add('hidden');
+            clearBtn.classList.add('hidden');
+        }
     }
 
     let previewTotal = 0;

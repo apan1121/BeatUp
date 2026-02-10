@@ -110,6 +110,10 @@
                     <span id="editor-bpm-value">120</span>
                 </div>
                 <span class="bpm-seconds" id="bpm-seconds">每拍 0.50 秒</span>
+                <button class="btn btn-secondary btn-small" id="btn-detect-bpm">🎵 從音樂偵測</button>
+                <input type="file" id="bpm-music-file" accept="audio/*" style="display:none">
+                <span class="bpm-music-status hidden" id="bpm-music-status"></span>
+                <button class="btn btn-danger btn-small hidden" id="btn-clear-music">✕ 移除音樂</button>
             </div>
 
             <div class="editor-buttons">
@@ -162,7 +166,7 @@
 
     <script>
     (function() {
-        var scripts = ['js/data.js', 'js/opfs.js', 'js/audio.js', 'js/editor.js', 'js/game.js', 'js/app.js'];
+        var scripts = ['js/data.js', 'js/opfs.js', 'js/audio.js', 'js/bpm-detect.js', 'js/editor.js', 'js/game.js', 'js/app.js'];
         var v = '?v=' + Date.now();
         function loadNext(i) {
             if (i >= scripts.length) return;

@@ -97,12 +97,14 @@ const Game = (() => {
         nextNoteTime = AudioEngine.currentTime() + 0.1;
         elPlayBtn().textContent = '⏹ 停止';
         updateRoundLabel();
+        AudioEngine.playMusic(nextNoteTime);
         scheduler();
     }
 
     function stop() {
         isPlaying = false;
         clearTimeout(schedulerTimer);
+        AudioEngine.stopMusic();
         boxes.forEach(b => b.classList.remove('active'));
         elPlayBtn().textContent = '▶ 播放';
         elRoundLabel().classList.add('hidden');
