@@ -42,40 +42,54 @@ function createEmptyStage() {
     return { beats: [null, null, null, null, null, null, null, null] };
 }
 
-// 自訂動作
-function addCustomAction(name, icon) {
-    const id = 'custom_' + Date.now();
+// 動作管理
+function addAction(name, icon) {
+    const id = 'action_' + Date.now();
     const colorIndex = ACTIONS.length % PRESET_COLORS.length;
-    const action = { id, name, icon, color: PRESET_COLORS[colorIndex], custom: true };
+    const action = { id, name, icon, color: PRESET_COLORS[colorIndex] };
     ACTIONS.push(action);
-    saveCustomActions();
+    saveActions();
     return action;
 }
 
-function removeCustomAction(id) {
+function updateAction(id, name, icon) {
+    const action = ACTIONS.find(a => a.id === id);
+    if (!action) return;
+    action.name = name;
+    action.icon = icon;
+    saveActions();
+}
+
+function removeAction(id) {
     ACTIONS = ACTIONS.filter(a => a.id !== id);
-    saveCustomActions();
+    saveActions();
 }
 
-function saveCustomActions() {
-    const customs = ACTIONS.filter(a => a.custom);
-    localStorage.setItem(STORAGE_ACTIONS_KEY, JSON.stringify(customs));
+function resetActions() {
+    ACTIONS = JSON.parse(JSON.stringify(DEFAULT_ACTIONS));
+    saveActions();
 }
 
-function loadCustomActions() {
+function saveActions() {
+    localStorage.setItem(STORAGE_ACTIONS_KEY, JSON.stringify(ACTIONS));
+}
+
+function loadActions() {
     try {
         const raw = localStorage.getItem(STORAGE_ACTIONS_KEY);
         if (raw) {
             const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-                ACTIONS = [...DEFAULT_ACTIONS, ...parsed];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                ACTIONS = parsed;
+                return;
             }
         }
     } catch (e) { /* ignore */ }
+    ACTIONS = JSON.parse(JSON.stringify(DEFAULT_ACTIONS));
 }
 
-// 啟動時載入自訂動作
-loadCustomActions();
+// 啟動時載入動作
+loadActions();
 
 // localStorage 操作
 function loadStages() {

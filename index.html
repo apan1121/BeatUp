@@ -100,18 +100,20 @@
                     <div class="beat-row" id="editor-row1"></div>
                     <div class="beat-row" id="editor-row2"></div>
                 </div>
+                <button class="btn btn-secondary btn-small" id="btn-random">隨機填入</button>
             </div>
 
             <div class="editor-bpm">
-                <label>節奏速度 (BPM)</label>
+                <label>節奏速度 (BPM) <button class="bpm-demo-btn" id="btn-bpm-demo">▶</button></label>
                 <div class="bpm-row">
                     <input type="range" id="editor-bpm" min="60" max="300" value="120">
                     <span id="editor-bpm-value">120</span>
                 </div>
+                <span class="bpm-seconds" id="bpm-seconds">每拍 0.50 秒</span>
             </div>
 
             <div class="editor-buttons">
-                <button class="btn btn-secondary" id="btn-random">隨機填入</button>
+                <button class="btn btn-outline-danger" id="btn-reset-actions">↺ 還原預設</button>
                 <button class="btn btn-primary" id="btn-save">儲存配置</button>
             </div>
 

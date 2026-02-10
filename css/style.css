@@ -53,6 +53,19 @@ body {
     min-width: auto;
     font-size: 13px;
 }
+.btn-small {
+    padding: 8px 20px;
+    font-size: 13px;
+    min-width: auto;
+}
+.btn-outline-danger {
+    background: transparent;
+    color: #e74c3c;
+    border: 1px solid #e74c3c;
+}
+.btn-outline-danger:hover {
+    background: rgba(231, 76, 60, 0.1);
+}
 .btn-large {
     padding: 16px 48px;
     font-size: 20px;
@@ -166,6 +179,13 @@ body {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 }
+.grid-section {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
 .section-label {
     font-size: 14px;
     color: #999;
@@ -242,6 +262,11 @@ body {
 }
 
 /* Editor grid styling */
+.beat-placeholder {
+    font-size: 12px;
+    color: #666;
+    pointer-events: none;
+}
 #screen-editor .beat-box {
     background: #3a3a4e;
     border-color: #555;
@@ -284,6 +309,28 @@ body {
     font-weight: 700;
     color: #7c5ce0;
     min-width: 40px;
+}
+.bpm-demo-btn {
+    background: transparent;
+    border: 1px solid #666;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    color: #ccc;
+    font-size: 11px;
+    cursor: pointer;
+    margin-left: 6px;
+    vertical-align: middle;
+    transition: all 0.15s;
+    line-height: 1;
+}
+.bpm-demo-btn:hover { border-color: #7c5ce0; color: #7c5ce0; }
+.bpm-demo-btn.playing { border-color: #e74c3c; color: #e74c3c; }
+.bpm-seconds {
+    display: block;
+    font-size: 13px;
+    color: #777;
+    margin-top: 4px;
 }
 
 /* Editor ad */
@@ -456,6 +503,13 @@ body {
     opacity: 0.7;
 }
 .source-add-btn:hover { opacity: 1; }
+.source-reset-btn {
+    border-color: #999 !important;
+    border-style: dashed !important;
+    cursor: pointer;
+    opacity: 0.7;
+}
+.source-reset-btn:hover { opacity: 1; }
 
 /* === Modal === */
 .modal-overlay {

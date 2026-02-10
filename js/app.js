@@ -15,6 +15,7 @@
 
         if (name === 'editor') Editor.init();
         if (name === 'game') Game.init();
+        if (name !== 'editor') Editor.stopPreview();
         if (name !== 'game') Game.stop();
     }
 
@@ -29,6 +30,7 @@
     document.getElementById('btn-add-stage').addEventListener('click', () => Editor.addStage());
     document.getElementById('btn-del-stage').addEventListener('click', () => Editor.deleteStage());
     document.getElementById('btn-random').addEventListener('click', () => Editor.randomFill());
+    document.getElementById('btn-reset-actions').addEventListener('click', () => Editor.resetToDefault());
     document.getElementById('btn-save').addEventListener('click', () => Editor.save());
 
     // 遊戲模式按鈕

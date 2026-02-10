@@ -14,6 +14,7 @@ const Editor = (() => {
     const elIndicator = () => document.getElementById('stage-indicator');
 
     let adLoaded = false;
+    let bpmInited = false;
 
     function init() {
         stages = loadStages();
@@ -37,20 +38,39 @@ const Editor = (() => {
     let previewBeat = 0;
     let previewNextTime = 0;
 
+    function updateBpmSeconds(bpm) {
+        var el = document.getElementById('bpm-seconds');
+        if (el) el.textContent = '每拍 ' + (60 / bpm).toFixed(2) + ' 秒';
+    }
+
     function initBPM() {
         const slider = document.getElementById('editor-bpm');
         const value = document.getElementById('editor-bpm-value');
+        const demoBtn = document.getElementById('btn-bpm-demo');
         const bpm = loadBPM();
         slider.value = bpm;
         value.textContent = bpm;
+        updateBpmSeconds(bpm);
+
+        if (bpmInited) return;
+        bpmInited = true;
 
         slider.addEventListener('input', () => {
             value.textContent = slider.value;
+            updateBpmSeconds(parseInt(slider.value, 10));
             startPreview(parseInt(slider.value, 10));
         });
 
         slider.addEventListener('change', () => {
             stopPreview();
+        });
+
+        demoBtn.addEventListener('click', () => {
+            if (previewTimer) {
+                stopPreview();
+            } else {
+                startPreview(parseInt(slider.value, 10));
+            }
         });
     }
 
@@ -62,11 +82,17 @@ const Editor = (() => {
         previewBeat = 0;
         previewTotal = 0;
         previewNextTime = AudioEngine.currentTime() + 0.05;
+        var btn = document.getElementById('btn-bpm-demo');
+        if (btn) { btn.textContent = '⏹'; btn.classList.add('playing'); }
         schedulePreview(bpm);
     }
 
     function schedulePreview(bpm) {
-        if (previewTotal >= 16) { stopPreview(); return; }
+        if (previewTotal >= 16) {
+            previewTimer = null;
+            stopPreview();
+            return;
+        }
         const ac = AudioEngine.getContext();
         while (previewNextTime < ac.currentTime + 0.1 && previewTotal < 16) {
             const isAccent = (previewBeat % 4 === 0);
@@ -85,6 +111,8 @@ const Editor = (() => {
             clearTimeout(previewTimer);
             previewTimer = null;
         }
+        var btn = document.getElementById('btn-bpm-demo');
+        if (btn) { btn.textContent = '▶'; btn.classList.remove('playing'); }
     }
 
     function renderSourceList() {
@@ -104,19 +132,30 @@ const Editor = (() => {
                 <span class="action-name">${action.name}</span>
             `;
             el.addEventListener('dragstart', onSourceDragStart);
+            el.addEventListener('dblclick', () => showEditActionDialog(action));
             wrapper.appendChild(el);
 
-            // 自訂動作可刪除
-            if (action.custom) {
-                const delBtn = document.createElement('button');
-                delBtn.className = 'source-del-btn';
-                delBtn.textContent = '✕';
-                delBtn.addEventListener('click', () => {
-                    removeCustomAction(action.id);
-                    renderSourceList();
-                });
-                wrapper.appendChild(delBtn);
-            }
+            // 所有動作都可刪除
+            const delBtn = document.createElement('button');
+            delBtn.className = 'source-del-btn';
+            delBtn.textContent = '✕';
+            delBtn.addEventListener('click', () => {
+                showConfirmDialog(
+                    `刪除「${action.name}」？`,
+                    '所有關卡中使用此動作的格子也會被清空',
+                    () => {
+                        removeAction(action.id);
+                        stages.forEach(stage => {
+                            for (let i = 0; i < stage.beats.length; i++) {
+                                if (stage.beats[i] === action.id) stage.beats[i] = null;
+                            }
+                        });
+                        renderSourceList();
+                        renderGrid();
+                    }
+                );
+            });
+            wrapper.appendChild(delBtn);
 
             list.appendChild(wrapper);
         });
@@ -127,6 +166,7 @@ const Editor = (() => {
         addBtn.innerHTML = '<span class="action-icon">＋</span><span class="action-name">新增</span>';
         addBtn.addEventListener('click', showAddActionDialog);
         list.appendChild(addBtn);
+
     }
 
     function showAddActionDialog() {
@@ -160,13 +200,53 @@ const Editor = (() => {
             const icon = document.getElementById('new-action-icon').value.trim();
             const name = document.getElementById('new-action-name').value.trim();
             if (!icon || !name) return;
-            addCustomAction(name, icon);
+            addAction(name, icon);
             overlay.remove();
             renderSourceList();
         });
 
         document.body.appendChild(overlay);
         document.getElementById('new-action-icon').focus();
+    }
+
+    function showEditActionDialog(action) {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = `
+            <div class="modal-box">
+                <h3>編輯動作</h3>
+                <div class="modal-field">
+                    <label>Emoji / 圖示</label>
+                    <input type="text" id="edit-action-icon" value="${action.icon}" maxlength="4">
+                </div>
+                <div class="modal-field">
+                    <label>動作名稱</label>
+                    <input type="text" id="edit-action-name" value="${action.name}" maxlength="6">
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn btn-secondary modal-cancel">取消</button>
+                    <button class="btn btn-primary modal-confirm">儲存</button>
+                </div>
+            </div>
+        `;
+
+        overlay.querySelector('.modal-cancel').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+
+        overlay.querySelector('.modal-confirm').addEventListener('click', () => {
+            const icon = document.getElementById('edit-action-icon').value.trim();
+            const name = document.getElementById('edit-action-name').value.trim();
+            if (!icon || !name) return;
+            updateAction(action.id, name, icon);
+            overlay.remove();
+            renderSourceList();
+            renderGrid();
+        });
+
+        document.body.appendChild(overlay);
+        document.getElementById('edit-action-icon').focus();
     }
 
     function renderGrid() {
@@ -187,6 +267,8 @@ const Editor = (() => {
             const actionId = stage.beats[i];
             if (actionId) {
                 setBoxAction(box, actionId);
+            } else {
+                box.innerHTML = '<span class="beat-placeholder">拖入</span>';
             }
 
             // Drop target
@@ -224,7 +306,7 @@ const Editor = (() => {
 
     function clearBox(box) {
         box.className = 'beat-box';
-        box.innerHTML = '';
+        box.innerHTML = '<span class="beat-placeholder">拖入</span>';
         delete box.dataset.actionId;
     }
 
@@ -351,5 +433,49 @@ const Editor = (() => {
         }, 1200);
     }
 
-    return { init, prevStage, nextStage, addStage, deleteStage, randomFill, save };
+    function resetToDefault() {
+        showConfirmDialog('確定要還原預設嗎？', '動作素材、關卡配置、BPM 都會被重設', () => {
+            // 重設動作素材
+            resetActions();
+            // 重設關卡配置
+            stages = JSON.parse(JSON.stringify(DEFAULT_STAGES));
+            currentStageIndex = 0;
+            // 重設 BPM
+            const slider = document.getElementById('editor-bpm');
+            const value = document.getElementById('editor-bpm-value');
+            slider.value = 120;
+            value.textContent = '120';
+            updateBpmSeconds(120);
+            // 重新渲染
+            renderSourceList();
+            renderGrid();
+            updateIndicator();
+        });
+    }
+
+    function showConfirmDialog(title, message, onConfirm) {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = `
+            <div class="modal-box">
+                <h3>${title}</h3>
+                <p style="color:#999;font-size:14px;text-align:center">${message}</p>
+                <div class="modal-buttons">
+                    <button class="btn btn-secondary modal-cancel">取消</button>
+                    <button class="btn btn-outline-danger modal-confirm">確定還原</button>
+                </div>
+            </div>
+        `;
+        overlay.querySelector('.modal-cancel').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+        overlay.querySelector('.modal-confirm').addEventListener('click', () => {
+            overlay.remove();
+            onConfirm();
+        });
+        document.body.appendChild(overlay);
+    }
+
+    return { init, prevStage, nextStage, addStage, deleteStage, randomFill, save, stopPreview, resetToDefault };
 })();
