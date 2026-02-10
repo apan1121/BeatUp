@@ -61,9 +61,11 @@ const Game = (() => {
             const action = actionId ? getActionById(actionId) : null;
 
             if (action) {
+                const isImage = action.iconType === 'image' && action.imageFileId && OPFS.getCachedURL(action.imageFileId);
                 box.classList.add(`action-${action.id}`);
+                if (isImage) box.classList.add('has-image');
                 box.innerHTML = `
-                    <span class="action-icon">${action.icon}</span>
+                    ${renderActionIcon(action)}
                     <span class="action-name">${action.name}</span>
                 `;
             }

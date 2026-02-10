@@ -2,7 +2,10 @@
  * app.js - 主程式：畫面切換、事件綁定
  */
 
-(() => {
+(async () => {
+    // 預先載入所有 OPFS 圖片快取
+    await OPFS.preloadAll();
+
     const screens = {
         home: document.getElementById('screen-home'),
         editor: document.getElementById('screen-editor'),

@@ -123,12 +123,13 @@ const Editor = (() => {
             wrapper.className = 'source-item-wrapper';
 
             const el = document.createElement('div');
-            el.className = `source-item`;
+            const isImage = action.iconType === 'image' && action.imageFileId && OPFS.getCachedURL(action.imageFileId);
+            el.className = `source-item${isImage ? ' has-image' : ''}`;
             el.style.borderColor = action.color;
             el.draggable = true;
             el.dataset.actionId = action.id;
             el.innerHTML = `
-                <span class="action-icon">${action.icon}</span>
+                ${renderActionIcon(action)}
                 <span class="action-name">${action.name}</span>
             `;
             el.addEventListener('dragstart', onSourceDragStart);
@@ -143,8 +144,8 @@ const Editor = (() => {
                 showConfirmDialog(
                     `刪除「${action.name}」？`,
                     '所有關卡中使用此動作的格子也會被清空',
-                    () => {
-                        removeAction(action.id);
+                    async () => {
+                        await removeAction(action.id);
                         stages.forEach(stage => {
                             for (let i = 0; i < stage.beats.length; i++) {
                                 if (stage.beats[i] === action.id) stage.beats[i] = null;
@@ -169,16 +170,31 @@ const Editor = (() => {
 
     }
 
+    // ====== 新增動作對話框 ======
     function showAddActionDialog() {
-        // 建立 modal
+        let currentIconType = 'emoji';
+        let selectedFile = null;
+
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
         overlay.innerHTML = `
             <div class="modal-box">
                 <h3>新增動作</h3>
-                <div class="modal-field">
+                <div class="icon-type-tabs">
+                    <button class="icon-tab active" data-type="emoji">Emoji</button>
+                    <button class="icon-tab" data-type="image">圖片</button>
+                </div>
+                <div class="modal-field icon-panel" id="panel-emoji">
                     <label>Emoji / 圖示</label>
                     <input type="text" id="new-action-icon" placeholder="例如：👊🦵💪" maxlength="4">
+                </div>
+                <div class="modal-field icon-panel hidden" id="panel-image">
+                    <label>上傳圖片</label>
+                    <div class="image-upload-area" id="image-upload-area">
+                        <input type="file" id="new-action-image" accept="image/*" style="display:none">
+                        <div class="upload-placeholder" id="upload-placeholder">點擊選擇圖片</div>
+                        <img class="upload-preview hidden" id="upload-preview">
+                    </div>
                 </div>
                 <div class="modal-field">
                     <label>動作名稱</label>
@@ -191,33 +207,93 @@ const Editor = (() => {
             </div>
         `;
 
+        // 標籤頁切換
+        overlay.querySelectorAll('.icon-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                overlay.querySelectorAll('.icon-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentIconType = tab.dataset.type;
+                document.getElementById('panel-emoji').classList.toggle('hidden', currentIconType !== 'emoji');
+                document.getElementById('panel-image').classList.toggle('hidden', currentIconType !== 'image');
+            });
+        });
+
+        // 圖片上傳
+        const setupUpload = () => {
+            const area = document.getElementById('image-upload-area');
+            const input = document.getElementById('new-action-image');
+            const preview = document.getElementById('upload-preview');
+            const placeholder = document.getElementById('upload-placeholder');
+            area.addEventListener('click', () => input.click());
+            input.addEventListener('change', () => {
+                if (input.files && input.files[0]) {
+                    selectedFile = input.files[0];
+                    const url = URL.createObjectURL(selectedFile);
+                    preview.src = url;
+                    preview.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                }
+            });
+        };
+
         overlay.querySelector('.modal-cancel').addEventListener('click', () => overlay.remove());
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) overlay.remove();
         });
 
-        overlay.querySelector('.modal-confirm').addEventListener('click', () => {
-            const icon = document.getElementById('new-action-icon').value.trim();
+        overlay.querySelector('.modal-confirm').addEventListener('click', async () => {
             const name = document.getElementById('new-action-name').value.trim();
-            if (!icon || !name) return;
-            addAction(name, icon);
+            if (!name) return;
+
+            if (currentIconType === 'emoji') {
+                const icon = document.getElementById('new-action-icon').value.trim();
+                if (!icon) return;
+                addAction(name, icon, 'emoji', null);
+            } else {
+                if (!selectedFile) return;
+                const compressed = await OPFS.compressImage(selectedFile);
+                const action = addAction(name, '🖼', 'image', null);
+                const fileId = action.id + '_img';
+                await OPFS.saveImage(fileId, compressed);
+                action.imageFileId = fileId;
+                saveActions();
+            }
             overlay.remove();
             renderSourceList();
         });
 
         document.body.appendChild(overlay);
+        setupUpload();
         document.getElementById('new-action-icon').focus();
     }
 
+    // ====== 編輯動作對話框 ======
     function showEditActionDialog(action) {
+        let currentIconType = action.iconType || 'emoji';
+        let selectedFile = null;
+        const existingImageUrl = (action.iconType === 'image' && action.imageFileId)
+            ? OPFS.getCachedURL(action.imageFileId) : null;
+
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
         overlay.innerHTML = `
             <div class="modal-box">
                 <h3>編輯動作</h3>
-                <div class="modal-field">
+                <div class="icon-type-tabs">
+                    <button class="icon-tab ${currentIconType === 'emoji' ? 'active' : ''}" data-type="emoji">Emoji</button>
+                    <button class="icon-tab ${currentIconType === 'image' ? 'active' : ''}" data-type="image">圖片</button>
+                </div>
+                <div class="modal-field icon-panel ${currentIconType !== 'emoji' ? 'hidden' : ''}" id="panel-emoji">
                     <label>Emoji / 圖示</label>
-                    <input type="text" id="edit-action-icon" value="${action.icon}" maxlength="4">
+                    <input type="text" id="edit-action-icon" value="${action.iconType === 'emoji' ? action.icon : ''}" maxlength="4">
+                </div>
+                <div class="modal-field icon-panel ${currentIconType !== 'image' ? 'hidden' : ''}" id="panel-image">
+                    <label>上傳圖片</label>
+                    <div class="image-upload-area" id="image-upload-area">
+                        <input type="file" id="edit-action-image" accept="image/*" style="display:none">
+                        <div class="upload-placeholder ${existingImageUrl ? 'hidden' : ''}" id="upload-placeholder">點擊選擇圖片</div>
+                        <img class="upload-preview ${existingImageUrl ? '' : 'hidden'}" id="upload-preview" ${existingImageUrl ? 'src="' + existingImageUrl + '"' : ''}>
+                    </div>
                 </div>
                 <div class="modal-field">
                     <label>動作名稱</label>
@@ -230,23 +306,76 @@ const Editor = (() => {
             </div>
         `;
 
+        // 標籤頁切換
+        overlay.querySelectorAll('.icon-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                overlay.querySelectorAll('.icon-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentIconType = tab.dataset.type;
+                document.getElementById('panel-emoji').classList.toggle('hidden', currentIconType !== 'emoji');
+                document.getElementById('panel-image').classList.toggle('hidden', currentIconType !== 'image');
+            });
+        });
+
+        // 圖片上傳
+        const setupUpload = () => {
+            const area = document.getElementById('image-upload-area');
+            const input = document.getElementById('edit-action-image');
+            const preview = document.getElementById('upload-preview');
+            const placeholder = document.getElementById('upload-placeholder');
+            area.addEventListener('click', () => input.click());
+            input.addEventListener('change', () => {
+                if (input.files && input.files[0]) {
+                    selectedFile = input.files[0];
+                    const url = URL.createObjectURL(selectedFile);
+                    preview.src = url;
+                    preview.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                }
+            });
+        };
+
         overlay.querySelector('.modal-cancel').addEventListener('click', () => overlay.remove());
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) overlay.remove();
         });
 
-        overlay.querySelector('.modal-confirm').addEventListener('click', () => {
-            const icon = document.getElementById('edit-action-icon').value.trim();
+        overlay.querySelector('.modal-confirm').addEventListener('click', async () => {
             const name = document.getElementById('edit-action-name').value.trim();
-            if (!icon || !name) return;
-            updateAction(action.id, name, icon);
+            if (!name) return;
+
+            if (currentIconType === 'emoji') {
+                const icon = document.getElementById('edit-action-icon').value.trim();
+                if (!icon) return;
+                // 如果之前是圖片，刪除舊圖
+                if (action.iconType === 'image' && action.imageFileId) {
+                    await OPFS.deleteImage(action.imageFileId);
+                }
+                updateAction(action.id, name, icon, 'emoji', null);
+            } else {
+                if (selectedFile) {
+                    // 上傳新圖片
+                    const compressed = await OPFS.compressImage(selectedFile);
+                    const fileId = action.id + '_img';
+                    await OPFS.saveImage(fileId, compressed);
+                    updateAction(action.id, name, '🖼', 'image', fileId);
+                } else if (action.iconType === 'image' && action.imageFileId) {
+                    // 保留原圖，只改名稱
+                    updateAction(action.id, name, '🖼', 'image', action.imageFileId);
+                } else {
+                    return; // 沒有圖片可用
+                }
+            }
             overlay.remove();
             renderSourceList();
             renderGrid();
         });
 
         document.body.appendChild(overlay);
-        document.getElementById('edit-action-icon').focus();
+        setupUpload();
+        if (currentIconType === 'emoji') {
+            document.getElementById('edit-action-icon').focus();
+        }
     }
 
     function renderGrid() {
@@ -296,9 +425,10 @@ const Editor = (() => {
     function setBoxAction(box, actionId) {
         const action = getActionById(actionId);
         if (!action) return;
-        box.className = `beat-box has-action action-${action.id}`;
+        const isImage = action.iconType === 'image' && action.imageFileId && OPFS.getCachedURL(action.imageFileId);
+        box.className = `beat-box has-action action-${action.id}${isImage ? ' has-image' : ''}`;
         box.innerHTML = `
-            <span class="action-icon">${action.icon}</span>
+            ${renderActionIcon(action)}
             <span class="action-name">${action.name}</span>
         `;
         box.dataset.actionId = actionId;
@@ -422,7 +552,6 @@ const Editor = (() => {
     function save() {
         saveStages(stages);
         saveBPM(parseInt(document.getElementById('editor-bpm').value, 10));
-        // 簡單的儲存反饋
         const btn = document.getElementById('btn-save');
         const orig = btn.textContent;
         btn.textContent = '✓ 已儲存';
@@ -434,19 +563,15 @@ const Editor = (() => {
     }
 
     function resetToDefault() {
-        showConfirmDialog('確定要還原預設嗎？', '動作素材、關卡配置、BPM 都會被重設', () => {
-            // 重設動作素材
-            resetActions();
-            // 重設關卡配置
+        showConfirmDialog('確定要還原預設嗎？', '動作素材、關卡配置、BPM 都會被重設', async () => {
+            await resetActions();
             stages = JSON.parse(JSON.stringify(DEFAULT_STAGES));
             currentStageIndex = 0;
-            // 重設 BPM
             const slider = document.getElementById('editor-bpm');
             const value = document.getElementById('editor-bpm-value');
             slider.value = 120;
             value.textContent = '120';
             updateBpmSeconds(120);
-            // 重新渲染
             renderSourceList();
             renderGrid();
             updateIndicator();

@@ -3,9 +3,9 @@
  */
 
 const DEFAULT_ACTIONS = [
-    { id: 'forward',  name: '前',   icon: '⬆', color: '#4A90D9' },
-    { id: 'backward', name: '後',   icon: '⬇', color: '#E8913A' },
-    { id: 'turn',     name: '轉身', icon: '🔄', color: '#C44A8C' },
+    { id: 'forward',  name: '前',   icon: '⬆', iconType: 'emoji', imageFileId: null, color: '#4A90D9' },
+    { id: 'backward', name: '後',   icon: '⬇', iconType: 'emoji', imageFileId: null, color: '#E8913A' },
+    { id: 'turn',     name: '轉身', icon: '🔄', iconType: 'emoji', imageFileId: null, color: '#C44A8C' },
 ];
 
 const PRESET_COLORS = [
@@ -42,30 +42,55 @@ function createEmptyStage() {
     return { beats: [null, null, null, null, null, null, null, null] };
 }
 
+/**
+ * 產生 action icon 的 HTML（emoji 或圖片）
+ */
+function renderActionIcon(action) {
+    if (action.iconType === 'image' && action.imageFileId) {
+        const url = OPFS.getCachedURL(action.imageFileId);
+        if (url) {
+            return `<img class="action-icon action-icon-img" src="${url}" alt="${action.name}" draggable="false">`;
+        }
+    }
+    return `<span class="action-icon">${action.icon}</span>`;
+}
+
 // 動作管理
-function addAction(name, icon) {
+function addAction(name, icon, iconType, imageFileId) {
     const id = 'action_' + Date.now();
     const colorIndex = ACTIONS.length % PRESET_COLORS.length;
-    const action = { id, name, icon, color: PRESET_COLORS[colorIndex] };
+    const action = {
+        id, name, icon,
+        iconType: iconType || 'emoji',
+        imageFileId: imageFileId || null,
+        color: PRESET_COLORS[colorIndex]
+    };
     ACTIONS.push(action);
     saveActions();
     return action;
 }
 
-function updateAction(id, name, icon) {
+function updateAction(id, name, icon, iconType, imageFileId) {
     const action = ACTIONS.find(a => a.id === id);
     if (!action) return;
     action.name = name;
     action.icon = icon;
+    if (iconType !== undefined) action.iconType = iconType;
+    if (imageFileId !== undefined) action.imageFileId = imageFileId;
     saveActions();
 }
 
-function removeAction(id) {
+async function removeAction(id) {
+    const action = ACTIONS.find(a => a.id === id);
+    if (action && action.iconType === 'image' && action.imageFileId) {
+        await OPFS.deleteImage(action.imageFileId);
+    }
     ACTIONS = ACTIONS.filter(a => a.id !== id);
     saveActions();
 }
 
-function resetActions() {
+async function resetActions() {
+    await OPFS.clearAll();
     ACTIONS = JSON.parse(JSON.stringify(DEFAULT_ACTIONS));
     saveActions();
 }
@@ -80,7 +105,11 @@ function loadActions() {
         if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
-                ACTIONS = parsed;
+                ACTIONS = parsed.map(a => ({
+                    ...a,
+                    iconType: a.iconType || 'emoji',
+                    imageFileId: a.imageFileId || null,
+                }));
                 return;
             }
         }
