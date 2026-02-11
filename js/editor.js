@@ -63,6 +63,10 @@ const Editor = (() => {
 
         slider.addEventListener('change', () => {
             stopPreview();
+            if (waveformData) {
+                waveformData.bpm = parseInt(slider.value, 10);
+                drawWaveform(waveformData);
+            }
         });
 
         demoBtn.addEventListener('click', () => {
@@ -80,6 +84,7 @@ const Editor = (() => {
         clearMusicBtn.addEventListener('click', () => {
             AudioEngine.clearMusic();
             updateMusicStatus();
+            hideWaveform();
         });
         updateMusicStatus();
 
@@ -96,6 +101,7 @@ const Editor = (() => {
                 value.textContent = bpm;
                 updateBpmSeconds(bpm);
                 updateMusicStatus();
+                drawWaveform(result);
             } catch (e) {
                 console.error('BPM detect error', e);
                 detectBtn.textContent = '偵測失敗';
@@ -123,6 +129,167 @@ const Editor = (() => {
         }
     }
 
+    // ====== 波形視覺化 ======
+    let waveformData = null; // 儲存偵測結果供繪製
+    let waveformImage = null; // 快取波形底圖 ImageData
+    let playheadRAF = null;
+    let previewStartCtxTime = 0;
+    let waveformDuration = 0; // 波形顯示的秒數
+    let canvasW = 0, canvasH = 0; // 快取 canvas 像素尺寸
+
+    function drawWaveform(detectResult) {
+        waveformData = detectResult;
+        var container = document.getElementById('editor-waveform-container');
+        var canvas = document.getElementById('editor-waveform');
+        if (!container || !canvas) return;
+
+        container.classList.remove('hidden');
+
+        var buf = AudioEngine.getMusicBuffer();
+        if (!buf) return;
+
+        // canvas 尺寸只量測一次，之後用快取值
+        var dpr = window.devicePixelRatio || 1;
+        if (canvasW === 0 || canvasH === 0) {
+            var rect = container.getBoundingClientRect();
+            canvasW = Math.round(rect.width * dpr);
+            canvasH = Math.round(rect.height * dpr);
+            canvas.width = canvasW;
+            canvas.height = canvasH;
+        }
+        var w = canvasW;
+        var h = canvasH;
+
+        // 只畫前 N 秒（與 demo 播放範圍對應）
+        var bpm = detectResult.bpm;
+        var maxBeats = 32;
+        waveformDuration = maxBeats * 60.0 / bpm;
+        var totalSamples = Math.min(
+            Math.round(waveformDuration * buf.sampleRate),
+            buf.length
+        );
+
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, w, h);
+
+        // 繪製波形
+        var raw = buf.getChannelData(0);
+        var step = Math.max(1, Math.floor(totalSamples / w));
+        ctx.fillStyle = 'rgba(124, 92, 224, 0.5)';
+        for (var x = 0; x < w; x++) {
+            var start = Math.floor(x * totalSamples / w);
+            var end = Math.min(start + step, totalSamples);
+            var min = 0, max = 0;
+            for (var j = start; j < end; j++) {
+                var v = raw[j] || 0;
+                if (v < min) min = v;
+                if (v > max) max = v;
+            }
+            var yMin = (1 + min) * h / 2;
+            var yMax = (1 + max) * h / 2;
+            ctx.fillRect(x, Math.floor(yMax), 1, Math.max(1, Math.floor(yMin - yMax)));
+        }
+
+        // 繪製音樂 onset 峰值（青色，從下方畫起，高度代表能量強度）
+        if (detectResult.onset && detectResult.frameRate) {
+            var onset = detectResult.onset;
+            var fr = detectResult.frameRate;
+            var totalFrames = Math.min(onset.length, Math.round(waveformDuration * fr));
+            // 找出 onset 中的局部峰值
+            var peakThreshold = 0.15;
+            var minGap = Math.round(fr * 0.1); // 至少間隔 100ms
+            var lastPeak = -minGap;
+            ctx.strokeStyle = 'rgba(0, 200, 220, 0.6)';
+            ctx.lineWidth = dpr;
+            for (var fi = 1; fi < totalFrames - 1; fi++) {
+                if (onset[fi] > peakThreshold &&
+                    onset[fi] >= onset[fi - 1] &&
+                    onset[fi] >= onset[fi + 1] &&
+                    fi - lastPeak >= minGap) {
+                    var peakTime = fi / fr;
+                    var px = (peakTime / waveformDuration) * w;
+                    var peakH = onset[fi] * h * 0.4; // 高度 = 能量比例
+                    ctx.beginPath();
+                    ctx.moveTo(px, h);
+                    ctx.lineTo(px, h - peakH);
+                    ctx.stroke();
+                    lastPeak = fi;
+                }
+            }
+        }
+
+        // 繪製 BPM 節拍格線（紅色，等間距）
+        var offset = detectResult.offset;
+        var beatPeriod = 60.0 / bpm;
+        ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)';
+        ctx.lineWidth = dpr;
+        for (var t = offset; t < waveformDuration; t += beatPeriod) {
+            var bx = (t / waveformDuration) * w;
+            ctx.beginPath();
+            ctx.moveTo(bx, 0);
+            ctx.lineTo(bx, h);
+            ctx.stroke();
+        }
+
+        // 第一拍用較粗的線
+        ctx.strokeStyle = 'rgba(231, 76, 60, 1)';
+        ctx.lineWidth = 2 * dpr;
+        var firstX = (offset / waveformDuration) * w;
+        ctx.beginPath();
+        ctx.moveTo(firstX, 0);
+        ctx.lineTo(firstX, h);
+        ctx.stroke();
+
+        // 快取波形底圖
+        waveformImage = ctx.getImageData(0, 0, w, h);
+    }
+
+    function drawPlayhead(elapsed) {
+        var canvas = document.getElementById('editor-waveform');
+        if (!canvas || !waveformImage) return;
+
+        var dpr = window.devicePixelRatio || 1;
+        var w = canvasW;
+        var h = canvasH;
+        var ctx = canvas.getContext('2d');
+
+        // 還原快取的波形底圖（不重新計算尺寸）
+        ctx.putImageData(waveformImage, 0, 0);
+
+        // 播放頭
+        var px = (elapsed / waveformDuration) * w;
+        if (px < 0 || px > w) return;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.lineWidth = 2 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, h);
+        ctx.stroke();
+
+        // 播放頭光暈
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 6 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, h);
+        ctx.stroke();
+    }
+
+    function animatePlayhead() {
+        var elapsed = AudioEngine.currentTime() - previewStartCtxTime;
+        drawPlayhead(elapsed);
+        playheadRAF = requestAnimationFrame(animatePlayhead);
+    }
+
+    function hideWaveform() {
+        var container = document.getElementById('editor-waveform-container');
+        if (container) container.classList.add('hidden');
+        waveformData = null;
+        waveformImage = null;
+        canvasW = 0;
+        canvasH = 0;
+    }
+
     let previewTotal = 0;
 
     function startPreview(bpm) {
@@ -131,26 +298,31 @@ const Editor = (() => {
         previewBeat = 0;
         previewTotal = 0;
         previewNextTime = AudioEngine.currentTime() + 0.05;
+        previewStartCtxTime = previewNextTime;
         var btn = document.getElementById('btn-bpm-demo');
         if (btn) { btn.textContent = '⏹'; btn.classList.add('playing'); }
+        AudioEngine.playMusic(previewNextTime);
+        if (waveformData) animatePlayhead();
         schedulePreview(bpm);
     }
 
     function schedulePreview(bpm) {
-        if (previewTotal >= 16) {
+        // 有音樂時播久一點（32拍=4個八拍），方便確認對齊
+        var maxBeats = AudioEngine.hasMusic() ? 32 : 16;
+        if (previewTotal >= maxBeats) {
             previewTimer = null;
             stopPreview();
             return;
         }
         const ac = AudioEngine.getContext();
-        while (previewNextTime < ac.currentTime + 0.1 && previewTotal < 16) {
+        while (previewNextTime < ac.currentTime + 0.1 && previewTotal < maxBeats) {
             const isAccent = (previewBeat % 4 === 0);
             AudioEngine.playBeat(previewNextTime, isAccent);
             previewNextTime += 60.0 / bpm;
             previewBeat = (previewBeat + 1) % 8;
             previewTotal++;
         }
-        if (previewTotal < 16) {
+        if (previewTotal < maxBeats) {
             previewTimer = setTimeout(() => schedulePreview(bpm), 25);
         }
     }
@@ -159,6 +331,16 @@ const Editor = (() => {
         if (previewTimer) {
             clearTimeout(previewTimer);
             previewTimer = null;
+        }
+        if (playheadRAF) {
+            cancelAnimationFrame(playheadRAF);
+            playheadRAF = null;
+        }
+        AudioEngine.stopMusic();
+        // 還原波形底圖（移除播放頭）
+        if (waveformImage) {
+            var canvas = document.getElementById('editor-waveform');
+            if (canvas) canvas.getContext('2d').putImageData(waveformImage, 0, 0);
         }
         var btn = document.getElementById('btn-bpm-demo');
         if (btn) { btn.textContent = '▶'; btn.classList.remove('playing'); }

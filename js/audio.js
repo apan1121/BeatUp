@@ -51,6 +51,10 @@ const AudioEngine = (() => {
 
     function getMusicName() { return musicName; }
 
+    function getMusicBuffer() { return musicBuffer; }
+
+    function getMusicOffset() { return musicOffset; }
+
     function clearMusic() {
         stopMusic();
         musicBuffer = null;
@@ -158,5 +162,5 @@ const AudioEngine = (() => {
         });
     }
 
-    return { getContext, currentTime, playBeat, playComplete, setMusic, playMusic, stopMusic, hasMusic, getMusicName, clearMusic };
+    return { getContext, currentTime, playBeat, playComplete, setMusic, playMusic, stopMusic, hasMusic, getMusicName, getMusicBuffer, getMusicOffset, clearMusic };
 })();
