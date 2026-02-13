@@ -286,5 +286,12 @@ const BPMDetector = (() => {
         return Math.max(0, firstBeat / frameRate);
     }
 
-    return { detect };
+    /** 從已載入的 AudioBuffer 重新分析（用於頁面還原波形） */
+    function reanalyze() {
+        const buf = AudioEngine.getMusicBuffer();
+        if (!buf) return null;
+        return analyzeBPM(buf);
+    }
+
+    return { detect, reanalyze };
 })();

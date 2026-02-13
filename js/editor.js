@@ -24,6 +24,11 @@ const Editor = (() => {
         updateIndicator();
         initBPM();
         loadAd();
+        // 還原波形（音樂已在 app.js 啟動時載入 AudioEngine）
+        if (AudioEngine.hasMusic() && !waveformData) {
+            const result = BPMDetector.reanalyze();
+            if (result) drawWaveform(result);
+        }
     }
 
     function loadAd() {
@@ -81,11 +86,20 @@ const Editor = (() => {
         const detectBtn = document.getElementById('btn-detect-bpm');
         const fileInput = document.getElementById('bpm-music-file');
         const clearMusicBtn = document.getElementById('btn-clear-music');
-        clearMusicBtn.addEventListener('click', () => {
+        clearMusicBtn.addEventListener('click', async () => {
             AudioEngine.clearMusic();
+            await OPFS.deleteMusic();
+            clearMusicMeta();
             updateMusicStatus();
             hideWaveform();
         });
+
+        const muteCheckbox = document.getElementById('mute-beat-checkbox');
+        muteCheckbox.checked = loadMuteBeat();
+        muteCheckbox.addEventListener('change', () => {
+            saveMuteBeat(muteCheckbox.checked);
+        });
+
         updateMusicStatus();
 
         detectBtn.addEventListener('click', () => fileInput.click());
@@ -102,6 +116,9 @@ const Editor = (() => {
                 updateBpmSeconds(bpm);
                 updateMusicStatus();
                 drawWaveform(result);
+                // 持久化音樂檔到 OPFS
+                await OPFS.saveMusic(file.slice());
+                saveMusicMeta(file.name, result.offset);
             } catch (e) {
                 console.error('BPM detect error', e);
                 detectBtn.textContent = '偵測失敗';
@@ -118,14 +135,17 @@ const Editor = (() => {
     function updateMusicStatus() {
         const statusEl = document.getElementById('bpm-music-status');
         const clearBtn = document.getElementById('btn-clear-music');
+        const muteLabel = document.getElementById('mute-beat-label');
         if (AudioEngine.hasMusic()) {
             const name = AudioEngine.getMusicName() || '音樂';
             statusEl.textContent = '🎶 ' + name;
             statusEl.classList.remove('hidden');
             clearBtn.classList.remove('hidden');
+            if (muteLabel) muteLabel.classList.remove('hidden');
         } else {
             statusEl.classList.add('hidden');
             clearBtn.classList.add('hidden');
+            if (muteLabel) muteLabel.classList.add('hidden');
         }
     }
 

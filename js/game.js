@@ -12,6 +12,7 @@ const Game = (() => {
     let nextNoteTime = 0;
     let schedulerTimer = null;
     let bpm = 120;
+    let muteBeat = false;
 
     const SCHEDULE_AHEAD = 0.1;
     const LOOKAHEAD_MS = 25;
@@ -29,6 +30,7 @@ const Game = (() => {
     function init() {
         stages = loadStages();
         bpm = loadBPM();
+        muteBeat = loadMuteBeat();
         currentStageIndex = 0;
         currentBeat = 0;
         currentRound = 1;
@@ -162,7 +164,9 @@ const Game = (() => {
 
     function scheduleBeat(beat, time) {
         const isAccent = (beat === 0 || beat === 4);
-        AudioEngine.playBeat(time, isAccent);
+        if (!(muteBeat && AudioEngine.hasMusic())) {
+            AudioEngine.playBeat(time, isAccent);
+        }
 
         const delay = (time - AudioEngine.currentTime()) * 1000;
         setTimeout(() => {

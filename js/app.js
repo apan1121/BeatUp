@@ -6,6 +6,22 @@
     // 預先載入所有 OPFS 圖片快取
     await OPFS.preloadAll();
 
+    // 還原已儲存的音樂
+    const musicMeta = loadMusicMeta();
+    if (musicMeta) {
+        try {
+            const musicFile = await OPFS.loadMusic();
+            if (musicFile) {
+                const ac = AudioEngine.getContext();
+                const arrayBuf = await musicFile.arrayBuffer();
+                const audioBuf = await ac.decodeAudioData(arrayBuf);
+                AudioEngine.setMusic(audioBuf, musicMeta.name, musicMeta.offset || 0);
+            }
+        } catch (e) {
+            console.warn('Music restore failed', e);
+        }
+    }
+
     const screens = {
         home: document.getElementById('screen-home'),
         editor: document.getElementById('screen-editor'),

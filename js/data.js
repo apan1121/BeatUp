@@ -18,6 +18,8 @@ let ACTIONS = [...DEFAULT_ACTIONS];
 const STORAGE_KEY = 'beatup_stages';
 const STORAGE_BPM_KEY = 'beatup_bpm';
 const STORAGE_ACTIONS_KEY = 'beatup_custom_actions';
+const STORAGE_MUTE_BEAT_KEY = 'beatup_mute_beat';
+const STORAGE_MUSIC_META_KEY = 'beatup_music_meta';
 
 const DEFAULT_STAGES = [
     {
@@ -143,4 +145,27 @@ function loadBPM() {
 
 function saveBPM(bpm) {
     localStorage.setItem(STORAGE_BPM_KEY, String(bpm));
+}
+
+function loadMuteBeat() {
+    return localStorage.getItem(STORAGE_MUTE_BEAT_KEY) === '1';
+}
+
+function saveMuteBeat(muted) {
+    localStorage.setItem(STORAGE_MUTE_BEAT_KEY, muted ? '1' : '0');
+}
+
+function saveMusicMeta(name, offset) {
+    localStorage.setItem(STORAGE_MUSIC_META_KEY, JSON.stringify({ name, offset }));
+}
+
+function loadMusicMeta() {
+    try {
+        const raw = localStorage.getItem(STORAGE_MUSIC_META_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+}
+
+function clearMusicMeta() {
+    localStorage.removeItem(STORAGE_MUSIC_META_KEY);
 }

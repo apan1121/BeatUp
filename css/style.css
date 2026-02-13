@@ -368,6 +368,22 @@ body {
     white-space: nowrap;
 }
 
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #999;
+    margin-top: 8px;
+    cursor: pointer;
+}
+.checkbox-label input[type="checkbox"] {
+    accent-color: #7c5ce0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
 /* Editor ad */
 .editor-ad {
     width: 100%;

@@ -107,5 +107,39 @@ const OPFS = (() => {
         return _urlCache.get(fileId) || null;
     }
 
-    return { compressImage, saveImage, loadImageAsURL, deleteImage, clearAll, preloadAll, getCachedURL };
+    // ====== 音樂檔案存取 ======
+    const MUSIC_DIR = 'music-files';
+    const MUSIC_FILE = 'current';
+
+    async function getMusicDir() {
+        const root = await navigator.storage.getDirectory();
+        return await root.getDirectoryHandle(MUSIC_DIR, { create: true });
+    }
+
+    async function saveMusic(blob) {
+        const dir = await getMusicDir();
+        const handle = await dir.getFileHandle(MUSIC_FILE, { create: true });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+    }
+
+    async function loadMusic() {
+        try {
+            const dir = await getMusicDir();
+            const handle = await dir.getFileHandle(MUSIC_FILE);
+            return await handle.getFile();
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function deleteMusic() {
+        try {
+            const dir = await getMusicDir();
+            await dir.removeEntry(MUSIC_FILE);
+        } catch (e) { /* ignore */ }
+    }
+
+    return { compressImage, saveImage, loadImageAsURL, deleteImage, clearAll, preloadAll, getCachedURL, saveMusic, loadMusic, deleteMusic };
 })();
